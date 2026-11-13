@@ -88,8 +88,8 @@ void pilha_libera(Pilha* p){
         return;
     }
 
-    while(pilha_pop(p)){
-        free(pilha_pop);
+    while(!pilha_vazia(p)){
+        pilha_pop(p);
     }
     free(p);
 }

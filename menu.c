@@ -27,12 +27,23 @@ enum {
 int ler_inteiro(const char *mensagem, int min, int max)
 {
     int valor;
+    int lido;
+    int c;
 
     while (1) {
         printf("%s", mensagem);
-        scanf("%d", &valor);
+        lido = scanf("%d", &valor);
 
-        if (valor >= min && valor <= max) {
+        if (lido == EOF) {
+            return min;
+        }
+        //limpa o resto da linha (evita loop infinito se digitar letra)
+        while ((c = getchar()) != '\n' && c != EOF);
+
+        if (lido != 1) {
+            printf("Entrada invalida! Digite um numero.\n");
+        }
+        else if (valor >= min && valor <= max) {
             return valor;
         }
         else {
@@ -72,15 +83,19 @@ int menu_le_opcao_imprimir(){
 }
 
 Restaurante *menu_abrir(Restaurante *r){
-    if (r != NULL) {
+    if (r != NULL && r->aberto) {
         printf("O restaurante ja esta aberto.\n");
-        return r;
+        int reabrir = ler_inteiro("Reabrir e descartar mesas, fila e pratos? (1 = sim, 0 = nao): ", 0, 1);
+        if (!reabrir)
+            return r;
     }
-    int linhas  = ler_inteiro("Numero de linhas de mesas: ", 1, INT_MAX);
-    int colunas = ler_inteiro("Numero de colunas de mesas: ", 1, INT_MAX);
+    int linhas  = ler_inteiro("Numero de linhas de mesas: ", 1, 1000);
+    int colunas = ler_inteiro("Numero de colunas de mesas: ", 1, 1000);
 
-    r = restaurante_abre(linhas, colunas);
     if (r == NULL)
+        r = restaurante_cria();
+
+    if (r == NULL || !restaurante_abrir(r, linhas, colunas))
         printf("Erro de memória\n");
     else
         printf("Restaurante aberto com %d mesas (%dx%d).\n", linhas * colunas, linhas, colunas);
@@ -89,7 +104,17 @@ Restaurante *menu_abrir(Restaurante *r){
 
 void menu_chegar(Restaurante *r){
     int qtd = ler_inteiro("Quantidade de pessoas do grupo: ", 1, INT_MAX);
-    restaurante_chega_grupo(r, qtd);
+    int senha = restaurante_chegada(r, qtd);
+
+    if (senha == 0)
+        printf("Todas as %d pessoa(s) do grupo sentaram.\n", qtd);
+    else if (senha < 0)
+        printf("Erro de memória\n");
+    else {
+        int esperando = r->espera->fim->qtd_pessoas;
+        printf("%d pessoa(s) sentaram. Grupo recebeu a senha %d e %d pessoa(s) aguardam na fila.\n",
+               qtd - esperando, senha, esperando);
+    }
 }
 
 void menu_finalizar(Restaurante *r){
@@ -100,17 +125,27 @@ void menu_finalizar(Restaurante *r){
         printf("A mesa %d ja esta livre.\n", num);
         return;
     }
-    restaurante_finaliza_mesa(r, num);
+    printf("Mesa %d liberada.\n", num);
+    restaurante_liberar_mesa(r, num);
+
+    if (!m->ocupada && m->qtd_pratos < LUGARES_POR_MESA)
+        printf("Pratos insuficientes na pilha: a mesa %d aguarda reposicao para ser arrumada.\n", num);
 }
 
 void menu_desistir(Restaurante *r){
     int senha = ler_inteiro("Senha do grupo que desistiu: ", 1, INT_MAX);
-    restaurante_desiste(r, senha);
+
+    if (restaurante_desistir(r, senha))
+        printf("Grupo de senha %d saiu da fila.\n", senha);
+    else
+        printf("Nao existe grupo com a senha %d na fila.\n", senha);
 }
 
 void menu_repor(Restaurante *r){
     int qtd = ler_inteiro("Quantidade de pratos a repor: ", 1, INT_MAX);
     restaurante_repor_pratos(r, qtd);
+    printf("%d prato(s) repostos. ", qtd);
+    restaurante_imprime_pilha(r);
 }
 
 void menu_imprimir(Restaurante *r){
@@ -125,11 +160,11 @@ void menu_imprimir(Restaurante *r){
             restaurante_imprime_mesa(r, num);
             break;
         }
-        case IMP_MESAS: restaurante_imprime_mesas(r)
+        case IMP_MESAS: restaurante_imprime_mesas(r);
             break;
         case IMP_FILA:  restaurante_imprime_fila(r);   
             break;
-        case IMP_PILHA: restaurante_imprime_pratos(r); 
+        case IMP_PILHA: restaurante_imprime_pilha(r);
             break;
         default:
             break;
@@ -144,7 +179,7 @@ void menu_executa(){
     do {
         menu_exibe();
         opcao = menu_le_opcao();
-        if (r == NULL && opcao != OP_ABRIR && opcao != OP_SAIR) {
+        if ((r == NULL || !r->aberto) && opcao != OP_ABRIR && opcao != OP_SAIR) {
             printf("Abra o restaurante primeiro (opcao 1).\n");
             continue;
         }

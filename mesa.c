@@ -20,6 +20,7 @@ Mesa **mesa_cria_matriz(int linhas, int colunas){
             mesas[i][j].ocupada     = 0;
             mesas[i][j].qtd_pessoas = 0;
             mesas[i][j].comanda     = 0;
+            mesas[i][j].qtd_pratos  = 4;
         }
     }
     return mesas;
@@ -41,10 +42,11 @@ Mesa *mesa_busca(Mesa **mesas, int linhas, int colunas, int numero){
     return &mesas[i][j];
 }
 
+//so devolve mesa livre e arrumada (com os 4 pratos)
 Mesa *mesa_proxima_livre(Mesa **mesas, int linhas, int colunas){
     for (int i = 0; i < linhas; i++)
         for (int j = 0; j < colunas; j++)
-            if (!mesas[i][j].ocupada)
+            if (!mesas[i][j].ocupada && mesas[i][j].qtd_pratos == LUGARES_POR_MESA)
                 return &mesas[i][j];
     return NULL;
 }
@@ -69,36 +71,19 @@ void mesa_libera(Mesa *m){
     m->ocupada     = 0;
     m->qtd_pessoas = 0;
     m->comanda     = 0;
+    m->qtd_pratos  = 0;   //pratos usados saem da mesa, ela precisa ser arrumada de novo
     return;
 }
 
 void mesa_imprime(const Mesa *m){
     if (m->ocupada)
-        printf("Mesa %2d: OCUPADA | %d pessoa(s) | comanda %d\n",
-               m->numero, m->qtd_pessoas, m->comanda);
+        printf("Mesa %2d: OCUPADA | %d pessoa(s) | comanda %d | %d prato(s)\n",
+               m->numero, m->qtd_pessoas, m->comanda, m->qtd_pratos);
+    else if (m->qtd_pratos < LUGARES_POR_MESA)
+        printf("Mesa %2d: livre, aguardando pratos (%d prato(s))\n", m->numero, m->qtd_pratos);
     else
-        printf("Mesa %2d: livre\n", m->numero);
+        printf("Mesa %2d: livre | %d prato(s)\n", m->numero, m->qtd_pratos);
     return;
-}
-
-int acomodar_pessoas(Restaurante *r, int qtd){
-    int sentadas = 0;
-    while (qtd - sentadas > 0) {
-        Mesa *m = mesa_proxima_livre(r->mesas, r->linhas, r->colunas);
-        if (m == NULL) break;
-        //sem mesas disponiveis
-        int resto = qtd - sentadas;
-        int nesta;
-        if (resto > LUGARES_POR_MESA) {
-            nesta = LUGARES_POR_MESA;
-        } 
-        else {
-            nesta = resto;
-        }
-        mesa_ocupa(m, nesta, r->proxima_comanda++);
-        sentadas += nesta;
-    }
-    return sentadas;
 }
 
 void restaurante_imprime_mesa(Restaurante *r, int numero){
@@ -121,11 +106,13 @@ void restaurante_imprime_mesas(Restaurante *r){
             Mesa *m = &r->mesas[i][j];
             if (m->ocupada)
                 printf("[M%-2d: %dp C%-3d] ", m->numero, m->qtd_pessoas, m->comanda);
+            else if (m->qtd_pratos < LUGARES_POR_MESA)
+                printf("[M%-2d: s/prato ] ", m->numero);
             else
                 printf("[M%-2d: livre   ] ", m->numero);
         }
         printf("\n");
     }
-    printf("(p = pessoas, C = comanda)\n");
+    printf("(p = pessoas, C = comanda, s/prato = livre aguardando reposicao de pratos)\n");
     return;
 }

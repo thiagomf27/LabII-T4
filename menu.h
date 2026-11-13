@@ -1,6 +1,8 @@
 #ifndef MENU_H
 #define MENU_H
 
+#include "restaurante.h"
+
 int  ler_inteiro(const char *mensagem, int min, int max);
 void menu_executa();
 void menu_exibe();

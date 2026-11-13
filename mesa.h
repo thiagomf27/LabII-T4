@@ -8,6 +8,7 @@ typedef struct mesa {
     int ocupada;       /* 0 = livre, 1 = ocupada */
     int qtd_pessoas;   /* so vale se ocupada */
     int comanda;       /* so vale se ocupada */
+    int qtd_pratos;    /* 0 a 4, mesa livre so pode ser ocupada com 4 */
 } Mesa;
 
 struct restaurante; 
@@ -25,8 +26,8 @@ void mesa_libera(Mesa *m);
 void mesa_imprime(const Mesa *m);
 
 // operacoes no nivel do restaurante
+// (acomodar_pessoas fica no restaurante.c, pois precisa da pilha de pratos)
 
-int  acomodar_pessoas(struct restaurante *r, int qtd);
 void restaurante_imprime_mesa(struct restaurante *r, int numero);
 void restaurante_imprime_mesas(struct restaurante *r);
 
